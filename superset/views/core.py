@@ -428,7 +428,7 @@ class SliceModelView(SupersetModelView, DeleteMixin):  # noqa
         'slice_name', 'description', 'viz_type', 'datasource_name', 'owners',
     )
     list_columns = [
-        'slice_link', 'viz_type', 'datasource_link', 'creator', 'modified']
+        'slice_link', 'viz_type', 'datasource_link', 'creator', 'modified', 'schedule']
     order_columns = ['viz_type', 'datasource_link', 'modified']
     edit_columns = [
         'slice_name', 'description', 'viz_type', 'owners', 'dashboards',
@@ -485,6 +485,22 @@ class SliceModelView(SupersetModelView, DeleteMixin):  # noqa
         ]
         return self.render_template(
             'superset/add_slice.html',
+            bootstrap_data=json.dumps({
+                'datasources': sorted(datasources, key=lambda d: d['label']),
+            }),
+        )
+
+    @expose('/schedule/<slice_id>', methods=['GET', 'POST'])
+    @has_access
+    def schedule(self, slice_id):
+        datasources = ConnectorRegistry.get_all_datasources(db.session)
+        datasources = [
+            {'value': str(d.id) + '__' + d.type, 'label': repr(d)}
+            for d in datasources
+        ]
+        return self.render_template(
+            'superset/schedule.html',
+            entry='scheduleChart',
             bootstrap_data=json.dumps({
                 'datasources': sorted(datasources, key=lambda d: d['label']),
             }),
