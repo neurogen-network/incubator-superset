@@ -1,0 +1,19 @@
+{% extends "superset/basic.html" %}
+
+{% block title %}
+  Schedule Report
+{% endblock %}
+
+{% block body %}
+  <div
+    id="js-schedule-chart-container"
+    data-bootstrap="{{ bootstrap_data }}"
+  ></div>
+{% endblock %}
+
+{% block tail_js %}
+  {{ super() }}
+  {% with filename="scheduleChart" %}
+    {% include "superset/partials/_script_tag.html" %}
+  {% endwith %}
+{% endblock %}

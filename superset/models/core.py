@@ -231,10 +231,18 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
         return '/slicemodelview/edit/{}'.format(self.id)
 
     @property
+    def schedule_url(self):
+        return '/slicemodelview/schedule/{}'.format(self.id)
+
+    @property
     def slice_link(self):
         url = self.slice_url
         name = escape(self.slice_name)
         return Markup('<a href="{url}">{name}</a>'.format(**locals()))
+
+    @property
+    def schedule(self):
+        return Markup('<center><a href="{}"><i class="fa fa-calendar" /></i></a></center>'.format(self.schedule_url))
 
     def get_viz(self, force=False):
         """Creates :py:class:viz.BaseViz object from the url_params_multidict.
