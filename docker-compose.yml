@@ -1,0 +1,10 @@
+version: '3'
+services:
+  superset:
+    build:
+      context: .
+      args:
+        SUPERSET_VERSION: 0.23.0.dev0
+    image: ngn/superset
+    ports:
+      - 8088:8088

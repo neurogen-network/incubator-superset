@@ -16,6 +16,7 @@ from flask_appbuilder.baseviews import expose
 from flask_compress import Compress
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from flask_jwt_extended import JWTManager
 from werkzeug.contrib.fixers import ProxyFix
 
 from superset import config, utils
@@ -34,6 +35,36 @@ with open(APP_DIR + '/static/assets/backendSync.json', 'r') as f:
 app = Flask(__name__)
 app.config.from_object(CONFIG_MODULE)
 conf = app.config
+
+#################################################################
+# Jwt
+#################################################################
+jwt = JWTManager(app)
+
+
+# Using the user_claims_loader, we can specify a method that will be
+# called when creating access tokens, and add these claims to the said
+# token. This method is passed the identity of who the token is being
+# created for, and must return data that is json serializable
+
+@jwt.user_claims_loader
+def add_claims_to_access_token(identity):
+    roles = []
+    for role in identity.roles:
+        roles.append(role.name)
+    return {
+        'roles': roles
+    }
+
+# Create a function that will be called whenever create_access_token
+# is used. It will take whatever object is passed into the
+# create_access_token method, and lets us define what the identity
+# of the access token should be.
+
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    return user.username
+
 
 #################################################################
 # Handling manifest file logic at app start
@@ -114,6 +145,7 @@ if app.config.get('ENABLE_TIME_ROTATE'):
 
 if app.config.get('ENABLE_CORS'):
     from flask_cors import CORS
+
     CORS(app, **app.config.get('CORS_OPTIONS'))
 
 if app.config.get('ENABLE_PROXY_FIX'):
@@ -131,6 +163,7 @@ if app.config.get('ENABLE_CHUNK_ENCODING'):
             if environ.get('HTTP_TRANSFER_ENCODING', '').lower() == u'chunked':
                 environ['wsgi.input_terminated'] = True
             return self.app(environ, start_response)
+
 
     app.wsgi_app = ChunkedEncodingFix(app.wsgi_app)
 

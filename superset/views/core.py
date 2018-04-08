@@ -22,6 +22,7 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_appbuilder.security.decorators import has_access, has_access_api
 from flask_babel import gettext as __
 from flask_babel import lazy_gettext as _
+from flask_jwt_extended import (create_access_token, create_refresh_token, jwt_required, jwt_refresh_token_required, get_jwt_identity, get_raw_jwt)
 import pandas as pd
 from six import text_type
 import sqlalchemy as sqla
@@ -2696,6 +2697,20 @@ class Superset(BaseSupersetView):
         if not security_manager.datasource_access(viz_obj.datasource):
             return json_error_response(DATASOURCE_ACCESS_ERR, status=401)
         return self.get_query_string_response(viz_obj)
+
+    @api
+    @log_this
+    @expose('/api/auth', methods=['POST'])
+    def jwtAuth(self):
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        user = appbuilder.sm.auth_user_db(username, password)
+        access_token = create_access_token(identity=user)
+
+        result = dict()
+        result["access_token"] = access_token
+        return json_success(json.dumps(result))
 
 
 appbuilder.add_view_no_menu(Superset)
