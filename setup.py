@@ -44,7 +44,7 @@ setup(
     description=(
         'A interactive data visualization platform build on SqlAlchemy '
         'and druid.io'),
-    version=version_string,
+    version=version_string + 'b',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
@@ -57,7 +57,9 @@ setup(
         'flask==0.12.2',
         'flask-appbuilder==1.10.0',
         'flask-cache==0.13.1',
+        'Flask-Login==0.2.11',
         'flask-jwt-extended==3.7.2',
+        'PyJWT==1.6.1',
         'flask-migrate==2.1.1',
         'flask-script==2.0.6',
         'flask-compress==1.4.0',
@@ -95,6 +97,7 @@ setup(
     ],
     extras_require={
         'cors': ['Flask-Cors>=2.0.0'],
+        'async': ['gevent>=1.2.2']
     },
     tests_require=[
         'coverage',

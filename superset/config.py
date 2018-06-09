@@ -42,11 +42,11 @@ ROW_LIMIT = 50000
 VIZ_ROW_LIMIT = 10000
 # max rows retrieved by filter select auto complete
 FILTER_SELECT_ROW_LIMIT = 10000
-SUPERSET_WORKERS = 2  # deprecated
+SUPERSET_WORKERS = 10  # deprecated
 SUPERSET_CELERY_WORKERS = 32  # deprecated
 
 SUPERSET_WEBSERVER_ADDRESS = '0.0.0.0'
-SUPERSET_WEBSERVER_PORT = 8088
+SUPERSET_WEBSERVER_PORT = 8089
 SUPERSET_WEBSERVER_TIMEOUT = 60  # deprecated
 EMAIL_NOTIFICATIONS = False
 CUSTOM_SECURITY_MANAGER = None
@@ -57,10 +57,10 @@ SQLALCHEMY_TRACK_MODIFICATIONS = True
 SECRET_KEY = '\2\1thisismyscretkey\1\2\e\y\y\h'  # noqa
 
 # The SQLAlchemy connection string.
-# SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(DATA_DIR, 'superset.db')
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(DATA_DIR, 'superset2.db')
 # SQLALCHEMY_DATABASE_URI = 'mysql://myapp@localhost/myapp'
-SQLALCHEMY_DATABASE_URI = \
-    'postgresql+psycopg2://ngn:@localhost:7654/neurogen'
+# SQLALCHEMY_DATABASE_URI = \
+#    'postgresql+psycopg2://ngn:@localhost:7654/neurogen'
 
 # In order to hook up a custom password store for all SQLACHEMY connections
 # implement a function that takes a single argument of type 'sqla.engine.url',
@@ -85,7 +85,7 @@ DEBUG = False
 FLASK_USE_RELOAD = True
 
 # Whether to show the stacktrace on 500 error
-SHOW_STACKTRACE = True
+SHOW_STACKTRACE = False
 
 # Extract and use X-Forwarded-For/X-Forwarded-Proto headers?
 ENABLE_PROXY_FIX = False
@@ -106,7 +106,7 @@ APP_ICON = '/static/assets/images/superset-logo@2x.png'
 # [TimeZone List]
 # See: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 # other tz can be overridden by providing a local_config
-DRUID_IS_ACTIVE = True
+DRUID_IS_ACTIVE = False
 DRUID_TZ = tz.tzutc()
 DRUID_ANALYSIS_TYPES = ['cardinality']
 
@@ -124,7 +124,7 @@ AUTH_TYPE = AUTH_DB
 # AUTH_ROLE_ADMIN = 'Admin'
 
 # Uncomment to setup Public role name, no authentication needed
-# AUTH_ROLE_PUBLIC = 'Public'
+AUTH_ROLE_PUBLIC = 'Public'
 
 # Will allow user self registration
 # AUTH_USER_REGISTRATION = True
@@ -148,7 +148,7 @@ AUTH_TYPE = AUTH_DB
 # Grant public role the same set of permissions as for the GAMMA role.
 # This is useful if one wants to enable anonymous users to view
 # dashboards. Explicit grant on specific datasets is still required.
-PUBLIC_ROLE_LIKE_GAMMA = False
+PUBLIC_ROLE_LIKE_GAMMA = True
 
 # ---------------------------------------------------
 # Babel config for translations
@@ -187,8 +187,9 @@ CACHE_CONFIG = {'CACHE_TYPE': 'null'}
 TABLE_NAMES_CACHE_CONFIG = {'CACHE_TYPE': 'null'}
 
 # CORS Options
-ENABLE_CORS = False
+ENABLE_CORS = True
 CORS_OPTIONS = {}
+# CORS_OPTIONS = {'resources': '/api/*', 'origins': '*', 'send_wildcard': True}
 
 # Allowed format types for upload on Database view
 # TODO: Add processing of other spreadsheet formats (xls, xlsx etc)
@@ -283,7 +284,7 @@ SQL_CELERY_RESULTS_DB_FILE_PATH = os.path.join(DATA_DIR, 'celery_results.sqlite'
 # static http headers to be served by your Superset server.
 # This header prevents iFrames from other domains and
 # "clickjacking" as a result
-HTTP_HEADERS = {'X-Frame-Options': 'SAMEORIGIN'}
+HTTP_HEADERS = {}
 # If you need to allow iframes from other domains (and are
 # aware of the risks), you can disable this header:
 # HTTP_HEADERS = {}
@@ -412,9 +413,6 @@ SQL_QUERY_MUTATOR = None
 # When not using gunicorn, (nginx for instance), you may want to disable
 # using flask-compress
 ENABLE_FLASK_COMPRESS = True
-
-JWT_SECRET_KEY = "wZyBDYbdCrTiF1rsIIaE2s1syi9YapTI"
-JWT_IDENTITY_CLAIM = "uid"
 
 try:
     if CONFIG_PATH_ENV_VAR in os.environ:
