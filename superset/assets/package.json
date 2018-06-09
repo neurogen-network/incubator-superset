@@ -1,6 +1,6 @@
 {
   "name": "superset",
-  "version": "0.23.0dev",
+  "version": "0.999.0dev",
   "description": "Superset is a data exploration platform designed to be visual, intuitive, and interactive.",
   "license": "Apache-2.0",
   "directories": {
@@ -17,7 +17,7 @@
     "build": "NODE_ENV=production webpack --colors --progress",
     "lint": "eslint --ignore-path=.eslintignore --ext .js,.jsx .",
     "lint-fix": "eslint --fix --ignore-path=.eslintignore --ext .js,.jsx .",
-    "sync-backend": "babel-node --presets env javascripts/syncBackend.js"
+    "sync-backend": "babel-node --presets env src/syncBackend.js"
   },
   "repository": {
     "type": "git",
@@ -48,7 +48,6 @@
     "bootstrap-slider": "^10.0.0",
     "brace": "^0.10.0",
     "brfs": "^1.4.3",
-    "cal-heatmap": "3.6.2",
     "classnames": "^2.2.5",
     "d3": "^3.5.17",
     "d3-cloud": "^1.2.1",
@@ -75,6 +74,7 @@
     "moment": "^2.20.1",
     "mousetrap": "^1.6.1",
     "mustache": "^2.2.1",
+    "npm": "^5.7.1",
     "nvd3": "1.8.6",
     "object.entries": "^1.0.4",
     "object.keys": "^0.1.0",
