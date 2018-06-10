@@ -1,0 +1,8 @@
+version: '3'
+services:
+  superset:
+    build:
+      context: .
+    image: neurogen/superset
+    ports:
+      - 8088:8088

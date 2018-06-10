@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=C,R,W
 """The main config file for Superset
 
 All configuration in this file can be overridden by providing a superset_config
@@ -42,24 +43,23 @@ ROW_LIMIT = 50000
 VIZ_ROW_LIMIT = 10000
 # max rows retrieved by filter select auto complete
 FILTER_SELECT_ROW_LIMIT = 10000
-SUPERSET_WORKERS = 2
-SUPERSET_CELERY_WORKERS = 32
+SUPERSET_WORKERS = 10  # deprecated
+SUPERSET_CELERY_WORKERS = 32  # deprecated
 
 SUPERSET_WEBSERVER_ADDRESS = '0.0.0.0'
-SUPERSET_WEBSERVER_PORT = 8088
-SUPERSET_WEBSERVER_TIMEOUT = 60
+SUPERSET_WEBSERVER_PORT = 8089
+SUPERSET_WEBSERVER_TIMEOUT = 60  # deprecated
 EMAIL_NOTIFICATIONS = False
 CUSTOM_SECURITY_MANAGER = None
-SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_TRACK_MODIFICATIONS = True
 # ---------------------------------------------------------
 
 # Your App secret key
 SECRET_KEY = '\2\1thisismyscretkey\1\2\e\y\y\h'  # noqa
 
 # The SQLAlchemy connection string.
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(DATA_DIR, 'superset.db')
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(DATA_DIR, 'superset2.db')
 # SQLALCHEMY_DATABASE_URI = 'mysql://myapp@localhost/myapp'
-# SQLALCHEMY_DATABASE_URI = 'postgresql://root:password@localhost/myapp'
 
 # In order to hook up a custom password store for all SQLACHEMY connections
 # implement a function that takes a single argument of type 'sqla.engine.url',
@@ -74,17 +74,17 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(DATA_DIR, 'superset.db')
 QUERY_SEARCH_LIMIT = 1000
 
 # Flask-WTF flag for CSRF
-WTF_CSRF_ENABLED = True
+WTF_CSRF_ENABLED = False
 
 # Add endpoints that need to be exempt from CSRF protection
-WTF_CSRF_EXEMPT_LIST = []
+WTF_CSRF_EXEMPT_LIST = ['/superset/api/auth']
 
 # Whether to run the web server in debug mode or not
 DEBUG = False
 FLASK_USE_RELOAD = True
 
 # Whether to show the stacktrace on 500 error
-SHOW_STACKTRACE = True
+SHOW_STACKTRACE = False
 
 # Extract and use X-Forwarded-For/X-Forwarded-Proto headers?
 ENABLE_PROXY_FIX = False
@@ -105,7 +105,7 @@ APP_ICON = '/static/assets/images/superset-logo@2x.png'
 # [TimeZone List]
 # See: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 # other tz can be overridden by providing a local_config
-DRUID_IS_ACTIVE = True
+DRUID_IS_ACTIVE = False
 DRUID_TZ = tz.tzutc()
 DRUID_ANALYSIS_TYPES = ['cardinality']
 
@@ -123,7 +123,7 @@ AUTH_TYPE = AUTH_DB
 # AUTH_ROLE_ADMIN = 'Admin'
 
 # Uncomment to setup Public role name, no authentication needed
-# AUTH_ROLE_PUBLIC = 'Public'
+AUTH_ROLE_PUBLIC = 'Public'
 
 # Will allow user self registration
 # AUTH_USER_REGISTRATION = True
@@ -147,7 +147,7 @@ AUTH_TYPE = AUTH_DB
 # Grant public role the same set of permissions as for the GAMMA role.
 # This is useful if one wants to enable anonymous users to view
 # dashboards. Explicit grant on specific datasets is still required.
-PUBLIC_ROLE_LIKE_GAMMA = False
+PUBLIC_ROLE_LIKE_GAMMA = True
 
 # ---------------------------------------------------
 # Babel config for translations
@@ -164,7 +164,7 @@ LANGUAGES = {
     'zh': {'flag': 'cn', 'name': 'Chinese'},
     'ja': {'flag': 'jp', 'name': 'Japanese'},
     'de': {'flag': 'de', 'name': 'German'},
-    'pt-BR': {'flag': 'br', 'name': 'Brazilian Portuguese'},
+    'pt_BR': {'flag': 'br', 'name': 'Brazilian Portuguese'},
     'ru': {'flag': 'ru', 'name': 'Russian'},
 }
 # ---------------------------------------------------
@@ -186,8 +186,9 @@ CACHE_CONFIG = {'CACHE_TYPE': 'null'}
 TABLE_NAMES_CACHE_CONFIG = {'CACHE_TYPE': 'null'}
 
 # CORS Options
-ENABLE_CORS = False
+ENABLE_CORS = True
 CORS_OPTIONS = {}
+# CORS_OPTIONS = {'resources': '/api/*', 'origins': '*', 'send_wildcard': True}
 
 # Allowed format types for upload on Database view
 # TODO: Add processing of other spreadsheet formats (xls, xlsx etc)
@@ -282,7 +283,7 @@ SQL_CELERY_RESULTS_DB_FILE_PATH = os.path.join(DATA_DIR, 'celery_results.sqlite'
 # static http headers to be served by your Superset server.
 # This header prevents iFrames from other domains and
 # "clickjacking" as a result
-HTTP_HEADERS = {'X-Frame-Options': 'SAMEORIGIN'}
+HTTP_HEADERS = {}
 # If you need to allow iframes from other domains (and are
 # aware of the risks), you can disable this header:
 # HTTP_HEADERS = {}
@@ -356,6 +357,9 @@ SILENCE_FAB = True
 # The link to a page containing common errors and their resolutions
 # It will be appended at the bottom of sql_lab errors.
 TROUBLESHOOTING_LINK = ''
+
+# CSRF token timeout, set to None for a token that never expires
+WTF_CSRF_TIME_LIMIT = 60 * 60 * 24 * 7
 
 # This link should lead to a page with instructions on how to gain access to a
 # Datasource. It will be placed at the bottom of permissions errors.

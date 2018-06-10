@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=C,R,W
 """A collection of ORM sqlalchemy models for Superset"""
 from __future__ import absolute_import
 from __future__ import division
@@ -6,7 +7,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from copy import copy, deepcopy
-from datetime import date, datetime
+from datetime import datetime
 import functools
 import json
 import logging
@@ -20,8 +21,8 @@ import numpy
 import pandas as pd
 import sqlalchemy as sqla
 from sqlalchemy import (
-    Boolean, Column, create_engine, Date, DateTime, ForeignKey, Integer,
-    MetaData, select, String, Table, Text,
+    Boolean, Column, create_engine, DateTime, ForeignKey, Integer,
+    MetaData, String, Table, Text,
 )
 from sqlalchemy.engine import url
 from sqlalchemy.engine.url import make_url
@@ -29,11 +30,10 @@ from sqlalchemy.orm import relationship, subqueryload
 from sqlalchemy.orm.session import make_transient
 from sqlalchemy.pool import NullPool
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.sql import text
-from sqlalchemy.sql.expression import TextAsFrom
 from sqlalchemy_utils import EncryptedType
+import sqlparse
 
-from superset import app, db, db_engine_specs, sm, utils
+from superset import app, db, db_engine_specs, security_manager, utils
 from superset.connectors.connector_registry import ConnectorRegistry
 from superset.models.helpers import AuditMixinNullable, ImportMixin, set_perm
 from superset.viz import viz_types
@@ -104,7 +104,7 @@ class Slice(Model, AuditMixinNullable, ImportMixin):
     description = Column(Text)
     cache_timeout = Column(Integer)
     perm = Column(String(1000))
-    owners = relationship(sm.user_model, secondary=slice_user)
+    owners = relationship(security_manager.user_model, secondary=slice_user)
 
     export_fields = ('slice_name', 'datasource_type', 'datasource_name',
                      'viz_type', 'params', 'cache_timeout')
@@ -330,7 +330,7 @@ class Dashboard(Model, AuditMixinNullable, ImportMixin):
     slug = Column(String(255), unique=True)
     slices = relationship(
         'Slice', secondary=dashboard_slices, backref='dashboards')
-    owners = relationship(sm.user_model, secondary=dashboard_user)
+    owners = relationship(security_manager.user_model, secondary=dashboard_user)
 
     export_fields = ('dashboard_title', 'position_json', 'json_metadata',
                      'description', 'css', 'slug')
@@ -689,7 +689,7 @@ class Database(Model, AuditMixinNullable, ImportMixin):
         DB_CONNECTION_MUTATOR = config.get('DB_CONNECTION_MUTATOR')
         if DB_CONNECTION_MUTATOR:
             url, params = DB_CONNECTION_MUTATOR(
-                url, params, effective_username, sm)
+                url, params, effective_username, security_manager)
         return create_engine(url, **params)
 
     def get_reserved_words(self):
@@ -699,9 +699,13 @@ class Database(Model, AuditMixinNullable, ImportMixin):
         return self.get_dialect().identifier_preparer.quote
 
     def get_df(self, sql, schema):
-        sql = sql.strip().strip(';')
+        sqls = [str(s).strip().strip(';') for s in sqlparse.parse(sql)]
         eng = self.get_sqla_engine(schema=schema)
-        df = pd.read_sql(sql, eng)
+
+        for i in range(len(sqls) - 1):
+            eng.execute(sqls[i])
+
+        df = pd.read_sql_query(sqls[-1], eng)
 
         def needs_conversion(df_series):
             if df_series.empty:
@@ -710,7 +714,7 @@ class Database(Model, AuditMixinNullable, ImportMixin):
                 return True
             return False
 
-        for k, v in df.dtypes.iteritems():
+        for k, v in df.dtypes.items():
             if v.type == numpy.object_ and needs_conversion(df[k]):
                 df[k] = df[k].apply(utils.json_dumps_w_dates)
         return df
@@ -728,15 +732,8 @@ class Database(Model, AuditMixinNullable, ImportMixin):
             self, table_name, schema=schema, limit=limit, show_cols=show_cols,
             indent=indent, latest_partition=latest_partition, cols=cols)
 
-    def wrap_sql_limit(self, sql, limit=1000):
-        qry = (
-            select('*')
-            .select_from(
-                TextAsFrom(text(sql), ['*'])
-                .alias('inner_qry'),
-            ).limit(limit)
-        )
-        return self.compile_sqla_query(qry)
+    def apply_limit_to_sql(self, sql, limit=1000):
+        return self.db_engine_spec.apply_limit_to_sql(sql, limit, self)
 
     def safe_sqlalchemy_uri(self):
         return self.sqlalchemy_uri
@@ -794,7 +791,12 @@ class Database(Model, AuditMixinNullable, ImportMixin):
         return self.db_engine_spec.time_grains
 
     def grains_dict(self):
-        return {grain.name: grain for grain in self.grains()}
+        """Allowing to lookup grain by either label or duration
+
+        For backward compatibility"""
+        d = {grain.duration: grain for grain in self.grains()}
+        d.update({grain.label: grain for grain in self.grains()})
+        return d
 
     def get_extra(self):
         extra = {}
@@ -870,9 +872,9 @@ class Log(Model):
     dashboard_id = Column(Integer)
     slice_id = Column(Integer)
     json = Column(Text)
-    user = relationship(sm.user_model, backref='logs', foreign_keys=[user_id])
+    user = relationship(
+        security_manager.user_model, backref='logs', foreign_keys=[user_id])
     dttm = Column(DateTime, default=datetime.utcnow)
-    dt = Column(Date, default=date.today())
     duration_ms = Column(Integer)
     referrer = Column(String(1024))
 
@@ -969,7 +971,7 @@ class DatasourceAccessRequest(Model, AuditMixinNullable):
     def roles_with_datasource(self):
         action_list = ''
         perm = self.datasource.perm  # pylint: disable=no-member
-        pv = sm.find_permission_view_menu('datasource_access', perm)
+        pv = security_manager.find_permission_view_menu('datasource_access', perm)
         for r in pv.role:
             if r.name in self.ROLES_BLACKLIST:
                 continue

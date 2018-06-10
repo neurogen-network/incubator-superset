@@ -14,10 +14,9 @@ import unittest
 import pandas as pd
 from past.builtins import basestring
 
-from superset import app, appbuilder, cli, dataframe, db
+from superset import app, cli, dataframe, db, security_manager
 from superset.models.helpers import QueryStatus
 from superset.models.sql_lab import Query
-from superset.security import sync_role_definitions
 from superset.sql_parse import SupersetQuery
 from .base_tests import SupersetTestCase
 
@@ -98,17 +97,17 @@ class CeleryTestCase(SupersetTestCase):
         except OSError as e:
             app.logger.warn(str(e))
 
-        sync_role_definitions()
+        security_manager.sync_role_definitions()
 
         worker_command = BASE_DIR + '/bin/superset worker'
         subprocess.Popen(
             worker_command, shell=True, stdout=subprocess.PIPE)
 
-        admin = appbuilder.sm.find_user('admin')
+        admin = security_manager.find_user('admin')
         if not admin:
-            appbuilder.sm.add_user(
+            security_manager.add_user(
                 'admin', 'admin', ' user', 'admin@fab.org',
-                appbuilder.sm.find_role('Admin'),
+                security_manager.find_role('Admin'),
                 password='general')
         cli.load_examples(load_test_data=True)
 
@@ -139,38 +138,6 @@ class CeleryTestCase(SupersetTestCase):
         )
         self.logout()
         return json.loads(resp.data.decode('utf-8'))
-
-    def test_add_limit_to_the_query(self):
-        main_db = self.get_main_database(db.session)
-
-        select_query = 'SELECT * FROM outer_space;'
-        updated_select_query = main_db.wrap_sql_limit(select_query, 100)
-        # Different DB engines have their own spacing while compiling
-        # the queries, that's why ' '.join(query.split()) is used.
-        # In addition some of the engines do not include OFFSET 0.
-        self.assertTrue(
-            'SELECT * FROM (SELECT * FROM outer_space;) AS inner_qry '
-            'LIMIT 100' in ' '.join(updated_select_query.split()),
-        )
-
-        select_query_no_semicolon = 'SELECT * FROM outer_space'
-        updated_select_query_no_semicolon = main_db.wrap_sql_limit(
-            select_query_no_semicolon, 100)
-        self.assertTrue(
-            'SELECT * FROM (SELECT * FROM outer_space) AS inner_qry '
-            'LIMIT 100' in
-            ' '.join(updated_select_query_no_semicolon.split()),
-        )
-
-        multi_line_query = (
-            "SELECT * FROM planets WHERE\n Luke_Father = 'Darth Vader';"
-        )
-        updated_multi_line_query = main_db.wrap_sql_limit(multi_line_query, 100)
-        self.assertTrue(
-            'SELECT * FROM (SELECT * FROM planets WHERE '
-            "Luke_Father = 'Darth Vader';) AS inner_qry LIMIT 100" in
-            ' '.join(updated_multi_line_query.split()),
-        )
 
     def test_run_sync_query_dont_exist(self):
         main_db = self.get_main_database(db.session)
@@ -229,14 +196,40 @@ class CeleryTestCase(SupersetTestCase):
         self.assertEqual([{'name': 'Admin'}], df.to_dict(orient='records'))
         self.assertEqual(QueryStatus.SUCCESS, query.status)
         self.assertTrue('FROM tmp_async_1' in query.select_sql)
-        self.assertTrue('LIMIT 666' in query.select_sql)
         self.assertEqual(
             'CREATE TABLE tmp_async_1 AS \nSELECT name FROM ab_role '
-            "WHERE name='Admin'", query.executed_sql)
+            "WHERE name='Admin' LIMIT 666", query.executed_sql)
         self.assertEqual(sql_where, query.sql)
         self.assertEqual(0, query.rows)
         self.assertEqual(666, query.limit)
         self.assertEqual(False, query.limit_used)
+        self.assertEqual(True, query.select_as_cta)
+        self.assertEqual(True, query.select_as_cta_used)
+
+    def test_run_async_query_with_lower_limit(self):
+        main_db = self.get_main_database(db.session)
+        eng = main_db.get_sqla_engine()
+        sql_where = "SELECT name FROM ab_role WHERE name='Alpha' LIMIT 1"
+        result = self.run_sql(
+            main_db.id, sql_where, '5', async='true', tmp_table='tmp_async_2',
+            cta='true')
+        assert result['query']['state'] in (
+            QueryStatus.PENDING, QueryStatus.RUNNING, QueryStatus.SUCCESS)
+
+        time.sleep(1)
+
+        query = self.get_query_by_id(result['query']['serverId'])
+        df = pd.read_sql_query(query.select_sql, con=eng)
+        self.assertEqual(QueryStatus.SUCCESS, query.status)
+        self.assertEqual([{'name': 'Alpha'}], df.to_dict(orient='records'))
+        self.assertEqual(QueryStatus.SUCCESS, query.status)
+        self.assertTrue('FROM tmp_async_2' in query.select_sql)
+        self.assertEqual(
+            'CREATE TABLE tmp_async_2 AS \nSELECT name FROM ab_role '
+            "WHERE name='Alpha' LIMIT 1", query.executed_sql)
+        self.assertEqual(sql_where, query.sql)
+        self.assertEqual(0, query.rows)
+        self.assertEqual(1, query.limit)
         self.assertEqual(True, query.select_as_cta)
         self.assertEqual(True, query.select_as_cta_used)
 

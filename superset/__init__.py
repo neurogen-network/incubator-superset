@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=C,R,W
 """Package's main module!"""
 from __future__ import absolute_import
 from __future__ import division
@@ -16,10 +17,12 @@ from flask_appbuilder.baseviews import expose
 from flask_compress import Compress
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+# from flask_jwt_extended import JWTManager
 from werkzeug.contrib.fixers import ProxyFix
 
+from superset import config, utils
 from superset.connectors.connector_registry import ConnectorRegistry
-from superset import utils, config  # noqa
+from superset.security import SupersetSecurityManager
 
 APP_DIR = os.path.dirname(__file__)
 CONFIG_MODULE = os.environ.get('SUPERSET_CONFIG', 'superset.config')
@@ -33,6 +36,36 @@ with open(APP_DIR + '/static/assets/backendSync.json', 'r') as f:
 app = Flask(__name__)
 app.config.from_object(CONFIG_MODULE)
 conf = app.config
+
+# #################################################################
+# # Jwt
+# #################################################################
+# jwt = JWTManager(app)
+#
+#
+# # Using the user_claims_loader, we can specify a method that will be
+# # called when creating access tokens, and add these claims to the said
+# # token. This method is passed the identity of who the token is being
+# # created for, and must return data that is json serializable
+#
+# @jwt.user_claims_loader
+# def add_claims_to_access_token(identity):
+#     roles = []
+#     for role in identity.roles:
+#         roles.append(role.name)
+#     return {
+#         'roles': roles
+#     }
+#
+# # Create a function that will be called whenever create_access_token
+# # is used. It will take whatever object is passed into the
+# # create_access_token method, and lets us define what the identity
+# # of the access token should be.
+#
+# @jwt.user_identity_loader
+# def user_identity_lookup(user):
+#     return user.username
+
 
 #################################################################
 # Handling manifest file logic at app start
@@ -77,7 +110,9 @@ for bp in conf.get('BLUEPRINTS'):
 if conf.get('SILENCE_FAB'):
     logging.getLogger('flask_appbuilder').setLevel(logging.ERROR)
 
-if not app.debug:
+if app.debug:
+    app.logger.setLevel(logging.DEBUG)
+else:
     # In production mode, add log handler to sys.stderr.
     app.logger.addHandler(logging.StreamHandler())
     app.logger.setLevel(logging.INFO)
@@ -113,6 +148,7 @@ if app.config.get('ENABLE_TIME_ROTATE'):
 
 if app.config.get('ENABLE_CORS'):
     from flask_cors import CORS
+
     CORS(app, **app.config.get('CORS_OPTIONS'))
 
 if app.config.get('ENABLE_PROXY_FIX'):
@@ -130,6 +166,7 @@ if app.config.get('ENABLE_CHUNK_ENCODING'):
             if environ.get('HTTP_TRANSFER_ENCODING', '').lower() == u'chunked':
                 environ['wsgi.input_terminated'] = True
             return self.app(environ, start_response)
+
 
     app.wsgi_app = ChunkedEncodingFix(app.wsgi_app)
 
@@ -149,16 +186,23 @@ class MyIndexView(IndexView):
         return redirect('/superset/welcome')
 
 
+custom_sm = app.config.get('CUSTOM_SECURITY_MANAGER') or SupersetSecurityManager
+if not issubclass(custom_sm, SupersetSecurityManager):
+    raise Exception(
+        """Your CUSTOM_SECURITY_MANAGER must now extend SupersetSecurityManager,
+         not FAB's security manager.
+         See [4565] in UPDATING.md""")
+
 appbuilder = AppBuilder(
     app,
     db.session,
     base_template='superset/base.html',
     indexview=MyIndexView,
-    security_manager_class=app.config.get('CUSTOM_SECURITY_MANAGER'),
+    security_manager_class=custom_sm,
     update_perms=utils.get_update_perms_flag(),
 )
 
-sm = appbuilder.sm
+security_manager = appbuilder.sm
 
 results_backend = app.config.get('RESULTS_BACKEND')
 

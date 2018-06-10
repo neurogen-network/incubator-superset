@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=C,R,W
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -11,13 +12,13 @@ import logging
 from flask import flash, Markup, redirect
 from flask_appbuilder import CompactCRUDMixin, expose
 from flask_appbuilder.models.sqla.interface import SQLAInterface
+from flask_appbuilder.security.decorators import has_access
 from flask_babel import gettext as __
 from flask_babel import lazy_gettext as _
 
-from superset import appbuilder, db, security, sm, utils
+from superset import appbuilder, db, security_manager, utils
 from superset.connectors.base.views import DatasourceModelView
 from superset.connectors.connector_registry import ConnectorRegistry
-from superset.utils import has_access
 from superset.views.base import (
     BaseSupersetView, DatasourceFilter, DeleteMixin,
     get_datasource_exist_error_mgs, ListWidgetWithCheckboxes, SupersetModelView,
@@ -140,11 +141,11 @@ class DruidMetricInlineView(CompactCRUDMixin, SupersetModelView):  # noqa
 
     def post_add(self, metric):
         if metric.is_restricted:
-            security.merge_perm(sm, 'metric_access', metric.get_perm())
+            security_manager.merge_perm('metric_access', metric.get_perm())
 
     def post_update(self, metric):
         if metric.is_restricted:
-            security.merge_perm(sm, 'metric_access', metric.get_perm())
+            security_manager.merge_perm('metric_access', metric.get_perm())
 
 
 appbuilder.add_view_no_menu(DruidMetricInlineView)
@@ -177,7 +178,7 @@ class DruidClusterModelView(SupersetModelView, DeleteMixin, YamlExportMixin):  #
     }
 
     def pre_add(self, cluster):
-        security.merge_perm(sm, 'database_access', cluster.perm)
+        security_manager.merge_perm('database_access', cluster.perm)
 
     def pre_update(self, cluster):
         self.pre_add(cluster)
@@ -223,13 +224,13 @@ class DruidDatasourceModelView(DatasourceModelView, DeleteMixin, YamlExportMixin
     base_order = ('datasource_name', 'asc')
     description_columns = {
         'slices': _(
-            'The list of slices associated with this table. By '
+            'The list of charts associated with this table. By '
             'altering this datasource, you may change how these associated '
-            'slices behave. '
-            'Also note that slices need to point to a datasource, so '
-            'this form will fail at saving if removing slices from a '
-            'datasource. If you want to change the datasource for a slice, '
-            "overwrite the slice from the 'explore view'"),
+            'charts behave. '
+            'Also note that charts need to point to a datasource, so '
+            'this form will fail at saving if removing charts from a '
+            'datasource. If you want to change the datasource for a chart, '
+            "overwrite the chart from the 'explore view'"),
         'offset': _('Timezone offset (in hours) for this datasource'),
         'description': Markup(
             'Supports <a href="'
@@ -278,9 +279,9 @@ class DruidDatasourceModelView(DatasourceModelView, DeleteMixin, YamlExportMixin
 
     def post_add(self, datasource):
         datasource.refresh_metrics()
-        security.merge_perm(sm, 'datasource_access', datasource.get_perm())
+        security_manager.merge_perm('datasource_access', datasource.get_perm())
         if datasource.schema:
-            security.merge_perm(sm, 'schema_access', datasource.schema_perm)
+            security_manager.merge_perm('schema_access', datasource.schema_perm)
 
     def post_update(self, datasource):
         self.post_add(datasource)
