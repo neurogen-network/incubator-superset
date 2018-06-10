@@ -40,11 +40,11 @@ with open(os.path.join(PACKAGE_DIR, 'version_info.json'), 'w') as version_file:
 
 
 setup(
-    name='superset',
+    name='ngn-superset',
     description=(
         'A interactive data visualization platform build on SqlAlchemy '
         'and druid.io'),
-    version=version_string + 'b',
+    version='0.0.1',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
@@ -96,13 +96,10 @@ setup(
         'cors': ['flask-cors>=2.0.0'],
         'console_log': ['console_log==0.2.10'],
     },
-    author='Maxime Beauchemin',
-    author_email='maximebeauchemin@gmail.com',
-    url='https://github.com/apache/incubator-superset',
-    download_url=(
-        'https://github.com'
-        '/apache/incubator-superset/tarball/' + version_string
-    ),
+    author='test',
+    author_email='test@test.com',
+    url='',
+    download_url='',
     classifiers=[
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5',
