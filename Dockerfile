@@ -1,8 +1,14 @@
 FROM debian:stretch
 
+# Superset version
+ARG SUPERSET_VERSION=0.25.6
+
+# Configure environment
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     PYTHONPATH=/etc/superset:/home/superset:$PYTHONPATH \
+    SUPERSET_REPO=apache/incubator-superset \
+    SUPERSET_VERSION=${SUPERSET_VERSION} \
     SUPERSET_HOME=/var/lib/superset
 
 # Create superset user & install dependencies
@@ -15,16 +21,16 @@ RUN useradd -U -m superset && \
     apt-get install -y \
         build-essential \
         curl \
+        default-libmysqlclient-dev \
         libffi-dev \
         libldap2-dev \
         libpq-dev \
         libsasl2-dev \
         libssl-dev \
-        openjdk-8-jdk \
         python3-dev \
         python3-pip && \
-     apt-get clean && \
-     rm -r /var/lib/apt/lists/* && \
+    apt-get clean && \
+    rm -r /var/lib/apt/lists/* && \
      pip3 install --upgrade setuptools && \
      pip3 install --no-cache-dir \
         flask-cors==3.0.3 \

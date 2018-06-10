@@ -29,6 +29,11 @@ app.db
 .python-version
 .tox
 dump.rdb
+.Python
+bin
+include
+lib
+pip-selfcheck.json
 
 # Node.js, webpack artifacts
 *.entry.js
